@@ -1,0 +1,24 @@
+{
+  "name": "react-ts-utils",
+  "version": "1.0.0",
+  "description": "Utils to simplify development under React",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "mocha --ui bdd __tests__",
+    "transpile": "tsc -d -w --outDir dist"
+  },
+  "keywords": [
+    "react",
+    "utilities",
+    "typescript",
+    "merge"
+  ],
+  "author": "Antonov Andrew <wtnm@rambler.ru>",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^7.1.1",
+    "ts-mocha": "^7.0.0",
+    "typescript": "^3.8.3"
+  }
+}
