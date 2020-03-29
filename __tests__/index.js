@@ -6,7 +6,7 @@ process.env.TS_NODE_PROJECT = './tsconfig.json';
 require('ts-mocha'); // register mocha wrapper
 const {expect} = require('chai');
 
-const main = require('../index.tsx');
+const main = require('../src/index.tsx');
 
 
 describe('object manipulations tests', function () {
@@ -152,6 +152,12 @@ describe('object manipulations tests', function () {
 
     result = main.mergeState(obj, {array_1: []}, {arrays: (a, b) => a.concat(b)});
     expect(result.state).to.be.equal(obj);
+
+
+    obj = {a: 1, b: {c: 3}};
+    obj2 = {d: 4, e: 5};
+    result = main.merge(obj, obj2, {path: 'b/c'});
+    expect(result.b.c).to.be.equal(obj2)
   });
 
 

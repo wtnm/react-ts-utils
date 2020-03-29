@@ -1,5 +1,18 @@
 "use strict";
+/** @jsx h */
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const react_1 = require("react");
 const isUndefined = (value) => typeof value === 'undefined';
 exports.isUndefined = isUndefined;
 const isNumber = (value) => typeof value === "number";
@@ -239,7 +252,14 @@ exports.getSetIn = getSetIn;
 function mergeState(state, source, options = {}) {
     const fn = options.noSymbol ? objKeys : objKeysNSymb;
     // let arrayMergeFn: any = false;
-    let { SymbolDelete, del, diff, replace, arrays } = options;
+    let { SymbolDelete, del, diff, replace, arrays, path } = options;
+    if (path) {
+        if (isString(path))
+            path = path.split('/');
+        source = setIn({}, source, path);
+        if (replace && !isFunction(replace))
+            replace = setIn({}, replace, path);
+    }
     let forceReplace = replace;
     if (typeof forceReplace !== 'function') {
         if (!isMergeable(replace))
@@ -343,4 +363,44 @@ function objSplit(obj, fn, byKey = false) {
     return res;
 }
 exports.objSplit = objSplit;
+function extendSingleProps(key, base, extend = {}, args = [], opts = {}) {
+    let { _$cx, $baseClass, $rootKey } = opts;
+    if (react_1.isValidElement(extend))
+        return extend;
+    if (isFunction(extend))
+        return extend(base, key, ...toArray(args));
+    let { tagName = '_$tag', defaultTag: Tag = 'div', } = opts;
+    let rest = base ? Object.assign(Object.assign({ key, 'data-key': key }, base), extend) : Object.assign({ key, 'data-key': key }, extend);
+    if (rest[tagName]) {
+        Tag = rest[tagName];
+        delete rest[tagName];
+    }
+    if (rest.className)
+        rest.className = _$cx(rest.className);
+    if ($baseClass)
+        rest.className = _$cx(rest.className || '', `${$baseClass}${key !== $rootKey ? '__' + key : ''}`);
+    return react_1.createElement(Tag, rest);
+}
+exports.extendSingleProps = extendSingleProps;
+function propsExtender(base = {}, extend = {}, args, opts = {}) {
+    let { onlyKeys, skipKeys } = opts, rest = __rest(opts, ["onlyKeys", "skipKeys"]);
+    let keys, baseKeys, res = {};
+    if (onlyKeys)
+        baseKeys = keys = onlyKeys;
+    else {
+        keys = objKeys(extend || {});
+        baseKeys = objKeys(base || {});
+    }
+    keys.forEach((k) => {
+        if (!skipKeys || !~skipKeys.indexOf(k))
+            res[k] = extendSingleProps(k, base[k], extend[k], args, rest);
+        baseKeys.splice(baseKeys.indexOf(k), 1);
+    });
+    baseKeys.forEach((k) => {
+        if (!skipKeys || !~skipKeys.indexOf(k))
+            res[k] = extendSingleProps(k, base[k], extend[k], args, rest);
+    });
+    return res;
+}
+exports.propsExtender = propsExtender;
 //# sourceMappingURL=index.js.map

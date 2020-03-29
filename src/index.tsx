@@ -1,3 +1,7 @@
+/** @jsx h */
+
+import {createElement as h, isValidElement} from 'react';
+
 export interface anyObject {
   [key: string]: any;
 
@@ -24,6 +28,7 @@ export interface MergeStateOptionsArgument {
   arrays?: Function; // 'mergeWithoutLength'
   replace?: replaceType; // force replace for mergeable object instead of merge, should be and object with true value for the keys that must be replaced, can be recursive for deep elements
   SymbolDelete?: any;
+  path?: string | string[];
 }
 
 export type replaceType = { [key: string]: boolean | replaceType } | boolean | ((path: any[]) => boolean);
@@ -242,7 +247,13 @@ function getSetIn(state: any, value: any, ...paths: any[]) {
 function mergeState(state: any, source: any, options: MergeStateOptionsArgument = {}): MergeStateResult {
   const fn = options.noSymbol ? objKeys : objKeysNSymb;
   // let arrayMergeFn: any = false;
-  let {SymbolDelete, del, diff, replace, arrays} = options;
+  let {SymbolDelete, del, diff, replace, arrays, path} = options;
+  if (path) {
+    if (isString(path)) path = path.split('/');
+    source = setIn({}, source, path);
+    if (replace && !isFunction(replace))
+      replace = setIn({}, replace, path);
+  }
   let forceReplace: any = replace;
   if (typeof forceReplace !== 'function') {
     if (!isMergeable(replace)) forceReplace = () => false;
@@ -341,8 +352,45 @@ function objSplit(obj: anyObject, fn: Function, byKey: boolean = false) {
   return res;
 }
 
+function extendSingleProps(key: string, base: any, extend: any = {}, args: any = [], opts: any = {}) {
+  let {_$cx, $baseClass, $rootKey} = opts;
+  if (isValidElement(extend)) return extend;
+  if (isFunction(extend)) return extend(base, key, ...toArray(args));
+  let {tagName = '_$tag', defaultTag: Tag = 'div',} = opts;
+  let rest = base ? {key, 'data-key': key, ...base, ...extend} : {key, 'data-key': key, ...extend};
+  if (rest[tagName]) {
+    Tag = rest[tagName];
+    delete rest[tagName];
+  }
+  if (rest.className)
+    rest.className = _$cx(rest.className);
+  if ($baseClass)
+    rest.className = _$cx(rest.className || '', `${$baseClass}${key !== $rootKey ? '__' + key : ''}`);
+  return h(Tag, rest);
+}
+
+function propsExtender(base: anyObject = {}, extend: anyObject = {}, args: any, opts: any = {}) {
+  let {onlyKeys, skipKeys, ...rest} = opts;
+  let keys: string[], baseKeys: string[], res: anyObject = {};
+  if (onlyKeys) baseKeys = keys = onlyKeys;
+  else {
+    keys = objKeys(extend || {});
+    baseKeys = objKeys(base || {});
+  }
+  keys.forEach((k: string) => {
+    if (!skipKeys || !~skipKeys.indexOf(k))
+      res[k] = extendSingleProps(k, base[k], extend[k], args, rest);
+    baseKeys.splice(baseKeys.indexOf(k), 1);
+  });
+  baseKeys.forEach((k: string) => {
+    if (!skipKeys || !~skipKeys.indexOf(k))
+      res[k] = extendSingleProps(k, base[k], extend[k], args, rest);
+  });
+  return res;
+}
+
 export {isEqual, isMergeable, isUndefined, isNumber, isInteger, isString, isObject, isArray, isFunction, isPromise}
 export {merge, mergeState, objSplit, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn};
 export {push2array, moveArrayElems, toArray, deArray}
-export {memoize, asNumber}
+export {memoize, asNumber, extendSingleProps, propsExtender}
 

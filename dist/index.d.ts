@@ -1,3 +1,4 @@
+/** @jsx h */
 export interface anyObject {
     [key: string]: any;
     [key: number]: any;
@@ -20,6 +21,7 @@ export interface MergeStateOptionsArgument {
     arrays?: Function;
     replace?: replaceType;
     SymbolDelete?: any;
+    path?: string | string[];
 }
 export declare type replaceType = {
     [key: string]: boolean | replaceType;
@@ -53,7 +55,9 @@ declare function getSetIn(state: any, value: any, ...paths: any[]): any;
 declare function mergeState(state: any, source: any, options?: MergeStateOptionsArgument): MergeStateResult;
 declare const merge: any;
 declare function objSplit(obj: anyObject, fn: Function, byKey?: boolean): any[];
+declare function extendSingleProps(key: string, base: any, extend?: any, args?: any, opts?: any): any;
+declare function propsExtender(base: anyObject | undefined, extend: anyObject | undefined, args: any, opts?: any): anyObject;
 export { isEqual, isMergeable, isUndefined, isNumber, isInteger, isString, isObject, isArray, isFunction, isPromise };
 export { merge, mergeState, objSplit, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn };
 export { push2array, moveArrayElems, toArray, deArray };
-export { memoize, asNumber };
+export { memoize, asNumber, extendSingleProps, propsExtender };
