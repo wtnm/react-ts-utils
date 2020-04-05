@@ -352,10 +352,10 @@ function objSplit(obj: anyObject, fn: Function, byKey: boolean = false) {
   return res;
 }
 
-function extendSingleProps(key: string, base: any, extend: any = {}, args: any = [], opts: any = {}) {
-  let {_$cx, $baseClass, $rootKey} = opts;
+function extendSingleProps(key: string, base: any, extend: any = {}, opts: any = {}) {
+  let {_$cx, $baseClass, $rootKey, $args = []} = opts;
   if (isValidElement(extend)) return extend;
-  if (isFunction(extend)) return extend(base, key, ...toArray(args));
+  if (isFunction(extend)) return extend(base, key, ...toArray($args));
   let {tagName = '_$tag', defaultTag: Tag = 'div',} = opts;
   let rest = base ? {key, 'data-key': key, ...base, ...extend} : {key, 'data-key': key, ...extend};
   if (rest[tagName]) {
@@ -369,9 +369,9 @@ function extendSingleProps(key: string, base: any, extend: any = {}, args: any =
   return h(Tag, rest);
 }
 
-function propsExtender(base: anyObject = {}, extend: anyObject = {}, args: any, opts: any = {}) {
+function propsExtender(base: anyObject = {}, extend: anyObject = {}, opts: any = {}) {
   let {onlyKeys, skipKeys, ...rest} = opts;
-  let keys: string[], baseKeys: string[], res: anyObject = {};
+  let keys: string[], baseKeys: string[], res: anyObject = {}, extendRes = {};
   if (onlyKeys) baseKeys = keys = onlyKeys;
   else {
     keys = objKeys(extend || {});
@@ -379,13 +379,15 @@ function propsExtender(base: anyObject = {}, extend: anyObject = {}, args: any, 
   }
   keys.forEach((k: string) => {
     if (!skipKeys || !~skipKeys.indexOf(k))
-      res[k] = extendSingleProps(k, base[k], extend[k], args, rest);
-    baseKeys.splice(baseKeys.indexOf(k), 1);
+      extendRes[k] = extendSingleProps(k, base[k], extend[k], rest);
+    let idx = baseKeys.indexOf(k);
+    if (~idx) baseKeys.splice(idx, 1);
   });
   baseKeys.forEach((k: string) => {
     if (!skipKeys || !~skipKeys.indexOf(k))
-      res[k] = extendSingleProps(k, base[k], extend[k], args, rest);
+      res[k] = extendSingleProps(k, base[k], extend[k], rest);
   });
+  Object.assign(res, extendRes);
   return res;
 }
 

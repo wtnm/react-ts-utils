@@ -60,6 +60,34 @@ describe('object manipulations tests', function () {
     expect(result).to.be.eql([{$vr: 1, $vt: 3}, {vr: 0, vt: 2}])
   });
 
+  it('test propsExtender', function () {
+    let baseProps = {
+      'checkbox': {_$tag: 'label'},
+      'input': {_$tag: 'input', type: 'checkbox'},
+      'label': {_$tag: 'span', children: ['label']}
+    };
+    let $extend = {
+      icon: {$_tag: 'div', children: 'img'},
+      text: {$_tag: 'div'}
+    };
+    let result = main.propsExtender(baseProps, $extend, {});
+    expect(main.objKeys(result).length).to.be.equal(5);
+    expect(main.objKeys(result)).to.be.eql(['checkbox', 'input', 'label', 'icon', 'text']);
+    result = main.propsExtender(baseProps, $extend, {skipKeys: ['checkbox']});
+    expect(main.objKeys(result).length).to.be.equal(4);
+    expect(main.objKeys(result)).to.be.eql(['input', 'label', 'icon', 'text']);
+    result = main.propsExtender(baseProps, $extend, {onlyKeys: ['checkbox']});
+    expect(main.objKeys(result).length).to.be.equal(1);
+    expect(main.objKeys(result)).to.be.eql(['checkbox']);
+
+    $extend = {
+      icon: {$_tag: 'div', children: 'img'},
+      label: {_$tag: 'h4'}
+    };
+    result = main.propsExtender(baseProps, $extend, {});
+    expect(main.objKeys(result).length).to.be.equal(4);
+  });
+
   it('test mergeState', function () {
 
     let obj = {sm: 3, val: {a: 1, b: {c: 1}}};

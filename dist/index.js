@@ -363,12 +363,12 @@ function objSplit(obj, fn, byKey = false) {
     return res;
 }
 exports.objSplit = objSplit;
-function extendSingleProps(key, base, extend = {}, args = [], opts = {}) {
-    let { _$cx, $baseClass, $rootKey } = opts;
+function extendSingleProps(key, base, extend = {}, opts = {}) {
+    let { _$cx, $baseClass, $rootKey, $args = [] } = opts;
     if (react_1.isValidElement(extend))
         return extend;
     if (isFunction(extend))
-        return extend(base, key, ...toArray(args));
+        return extend(base, key, ...toArray($args));
     let { tagName = '_$tag', defaultTag: Tag = 'div', } = opts;
     let rest = base ? Object.assign(Object.assign({ key, 'data-key': key }, base), extend) : Object.assign({ key, 'data-key': key }, extend);
     if (rest[tagName]) {
@@ -382,9 +382,9 @@ function extendSingleProps(key, base, extend = {}, args = [], opts = {}) {
     return react_1.createElement(Tag, rest);
 }
 exports.extendSingleProps = extendSingleProps;
-function propsExtender(base = {}, extend = {}, args, opts = {}) {
+function propsExtender(base = {}, extend = {}, opts = {}) {
     let { onlyKeys, skipKeys } = opts, rest = __rest(opts, ["onlyKeys", "skipKeys"]);
-    let keys, baseKeys, res = {};
+    let keys, baseKeys, res = {}, extendRes = {};
     if (onlyKeys)
         baseKeys = keys = onlyKeys;
     else {
@@ -393,13 +393,16 @@ function propsExtender(base = {}, extend = {}, args, opts = {}) {
     }
     keys.forEach((k) => {
         if (!skipKeys || !~skipKeys.indexOf(k))
-            res[k] = extendSingleProps(k, base[k], extend[k], args, rest);
-        baseKeys.splice(baseKeys.indexOf(k), 1);
+            extendRes[k] = extendSingleProps(k, base[k], extend[k], rest);
+        let idx = baseKeys.indexOf(k);
+        if (~idx)
+            baseKeys.splice(idx, 1);
     });
     baseKeys.forEach((k) => {
         if (!skipKeys || !~skipKeys.indexOf(k))
-            res[k] = extendSingleProps(k, base[k], extend[k], args, rest);
+            res[k] = extendSingleProps(k, base[k], extend[k], rest);
     });
+    Object.assign(res, extendRes);
     return res;
 }
 exports.propsExtender = propsExtender;

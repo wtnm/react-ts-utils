@@ -1,6 +1,6 @@
 {
   "name": "react-ts-utils",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Utils to simplify development under React",
   "main": "dist/index.js",
   "scripts": {
