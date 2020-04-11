@@ -1,11 +1,12 @@
 {
   "name": "react-ts-utils",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Utils to simplify development under React",
   "main": "dist/index.js",
   "scripts": {
     "test": "mocha --ui bdd __tests__",
-    "transpile": "tsc -d -w --outDir dist"
+    "transpile": "tsc -d -w --outDir dist",
+    "compile:sample:dev": "webpack --mode=development --entryFile=sample"
   },
   "keywords": [
     "react",
@@ -19,12 +20,31 @@
     "react": "^16.9.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.9.0",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
+    "@babel/plugin-transform-runtime": "^7.6.2",
+    "@babel/plugin-transform-typescript": "^7.6.0",
+    "@babel/preset-env": "^7.6.2",
+    "@babel/preset-react": "^7.0.0",
+    "@babel/preset-typescript": "^7.6.0",
+    "@types/node": "^13.11.1",
     "@types/react": "^16.9.27",
+    "babel-core": "^6.26.3",
+    "babel-loader": "^8.1.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-minify": "^0.5.1",
+    "babel-preset-react": "^6.24.1",
+    "babel-preset-stage-3": "^6.24.1",
     "chai": "^4.2.0",
     "mocha": "^7.1.1",
     "react": "^16.13.1",
+    "react-dom": "^16.13.1",
     "ts-mocha": "^7.0.0",
-    "typescript": "^3.8.3"
+    "typescript": "^3.8.3",
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11",
+    "webpack-config-utils": "^2.3.1"
   },
   "repository": {
     "type": "git",

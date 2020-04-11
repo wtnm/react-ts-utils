@@ -1,6 +1,6 @@
 /** @jsx h */
 
-import {createElement as h, isValidElement} from 'react';
+import {createElement as h, isValidElement, createContext, PureComponent, Component} from 'react';
 
 export interface anyObject {
   [key: string]: any;
@@ -356,11 +356,16 @@ function extendSingleProps(key: string, base: any, extend: any = {}, opts: any =
   let {_$cx, $baseClass, $rootKey, $args = []} = opts;
   if (isValidElement(extend)) return extend;
   if (isFunction(extend)) return extend(base, key, ...toArray($args));
-  let {tagName = '_$tag', defaultTag: Tag = 'div',} = opts;
+  let {tagName = '_$tag', wrapName = '_$wrap', defaultTag: Tag = 'div',} = opts;
   let rest = base ? {key, 'data-key': key, ...base, ...extend} : {key, 'data-key': key, ...extend};
   if (rest[tagName]) {
     Tag = rest[tagName];
     delete rest[tagName];
+  }
+  if (rest[wrapName]) {
+    let wrappers = toArray(rest[wrapName]);
+    Tag = wrappers.reduce((acc, wrap) => wrap ? wrap(acc, extend) : acc, Tag);
+    delete rest[wrapName];
   }
   if (rest.className)
     rest.className = _$cx(rest.className);
@@ -391,8 +396,149 @@ function propsExtender(base: anyObject = {}, extend: anyObject = {}, opts: any =
   return res;
 }
 
+function parseSearch(search: string) {
+  let searchValue = {};
+
+  if (search) {
+    if (~search.indexOf('?'))
+      search = search.substr(search.indexOf('?') + 1);
+    decodeURI(search).split('&').map(v => {
+      let [key, value] = v.split('=');
+      searchValue[key] = value;
+    });
+  }
+
+  return searchValue;
+}
+
+const getContext = memoize((name: string) => createContext(name));
+
+function withProvider(Component: any, opts: any = {}): any {
+  const {name, initialState} = opts;
+  const Provider = getContext(name).Provider;
+
+  class Result extends Component<any> {
+    subscribers = {};
+    providerValue = {value: this};
+
+    constructor(props: any, ...rest: any[]) {
+      super(props, ...rest);
+      if (initialState || !this.state)
+        this.state = initialState || {};
+    }
+
+    subscribe = (param: string, fn: any) => {
+      let {subscribers} = this;
+      if (!subscribers[param]) subscribers[param] = new Set();
+      subscribers[param].add(fn);
+      return this.unsubscribe.bind(this, param, fn)
+    };
+
+    unsubscribe = (param: string, fn: any) => {
+      let list = getIn(this.subscribers, param);
+      if (list) list.delete(fn);
+    };
+
+    setState = (partialState: any) => {
+      let updState = {};
+      objKeys(partialState).forEach(key => {
+        if (partialState[key] !== this.state[key])
+          updState[key] = partialState[key];
+      });
+      if (objKeys(updState).length)
+        super.setState(updState);
+    };
+
+    componentDidUpdate = (propsPrev: any, statePrev: any, ...rest: any[]) => {
+      let {props, state} = this;
+      let self = {props, propsPrev, state, statePrev};
+      let fns: any = [];
+
+      objKeys(this.subscribers).forEach(key => {
+        let path = key.split('/');
+        let nm = path[1];
+        if (nm === 'state' || nm === 'props') {
+          path = path.slice(2);
+          if (getIn(self[nm], path) !== getIn(self[nm + 'Prev'], path))
+            fns.push(...this.subscribers[key])
+        }
+      });
+
+      fns = new Set(fns);
+      for (let fn of fns) fn();
+      if (super.componentDidUpdate)
+        return super.componentDidUpdate(propsPrev, statePrev, ...rest);
+    };
+
+    render = () => {
+      return h(Provider, this.providerValue, super.render())
+    }
+  }
+
+  return Result;
+}
+
+function withConsumer(Component: any, opts: any = {}) {
+  const {name, keyStarts = '$'} = opts;
+  const context = getContext(name);
+
+  class Result extends PureComponent {
+    static contextType = context;
+
+    refresh = () => {
+      this.forceUpdate();
+    };
+
+    componentDidMount = () => {
+      this.subscribe(this.props);
+    };
+
+    componentWillUnmount = () => {
+      this.unsubscribe(this.props);
+    };
+
+    componentDidUpdate = (propsPrev: any) => {
+      this.unsubscribe(propsPrev);
+      this.subscribe(this.props);
+    };
+
+    private _isSubscribable = (key: string, props: any) => {
+      return key.substr(0, keyStarts.length) === keyStarts &&
+        isString(props[key]) &&
+        props[key].substr(0, 2) === '&/'
+    };
+
+    subscribe = (props: any) => {
+      objKeys(props).forEach(key => {
+        if (this._isSubscribable(key, props))
+          this.context.subscribe(props[key], this.refresh);
+      })
+    };
+
+    unsubscribe = (props: any) => {
+      objKeys(props).forEach(key => {
+        if (this._isSubscribable(key, props))
+          this.context.unsubscribe(props[key], this.refresh);
+      })
+    };
+
+    render = () => {
+      let provider = {'&': this.context};
+      let {...props} = this.props;
+      objKeys(props).forEach(key => {
+        if (this._isSubscribable(key, props))
+          props[key] = getIn(provider, props[key].split('/'))
+      });
+      return h(Component, props);
+    }
+  }
+
+  return Result as any;
+}
+
 export {isEqual, isMergeable, isUndefined, isNumber, isInteger, isString, isObject, isArray, isFunction, isPromise}
 export {merge, mergeState, objSplit, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn};
 export {push2array, moveArrayElems, toArray, deArray}
-export {memoize, asNumber, extendSingleProps, propsExtender}
+export {getContext, memoize, asNumber, extendSingleProps, propsExtender}
+export {withConsumer, withProvider, parseSearch}
 
