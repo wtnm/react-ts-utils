@@ -369,11 +369,16 @@ function extendSingleProps(key, base, extend = {}, opts = {}) {
         return extend;
     if (isFunction(extend))
         return extend(base, key, ...toArray($args));
-    let { tagName = '_$tag', defaultTag: Tag = 'div', } = opts;
+    let { tagName = '_$tag', wrapName = '_$wrap', defaultTag: Tag = 'div', } = opts;
     let rest = base ? Object.assign(Object.assign({ key, 'data-key': key }, base), extend) : Object.assign({ key, 'data-key': key }, extend);
     if (rest[tagName]) {
         Tag = rest[tagName];
         delete rest[tagName];
+    }
+    if (rest[wrapName]) {
+        let wrappers = toArray(rest[wrapName]);
+        Tag = wrappers.reduce((acc, wrap) => wrap ? wrap(acc, extend) : acc, Tag);
+        delete rest[wrapName];
     }
     if (rest.className)
         rest.className = _$cx(rest.className);
@@ -406,4 +411,131 @@ function propsExtender(base = {}, extend = {}, opts = {}) {
     return res;
 }
 exports.propsExtender = propsExtender;
+function parseSearch(search) {
+    let searchValue = {};
+    if (search) {
+        if (~search.indexOf('?'))
+            search = search.substr(search.indexOf('?') + 1);
+        decodeURI(search).split('&').map(v => {
+            let [key, value] = v.split('=');
+            searchValue[key] = value;
+        });
+    }
+    return searchValue;
+}
+exports.parseSearch = parseSearch;
+const getContext = memoize((name) => react_1.createContext(name));
+exports.getContext = getContext;
+function withProvider(Component, opts = {}) {
+    const { name, initialState } = opts;
+    const Provider = getContext(name).Provider;
+    let { prototype } = Component;
+    if (!prototype || !prototype.isReactComponent)
+        throw new Error('Only class-components can be used withProvider.');
+    class Result extends Component {
+        constructor(props, ...rest) {
+            super(props, ...rest);
+            this.subscribers = {};
+            this.providerValue = { value: this };
+            this.subscribe = (param, fn) => {
+                let { subscribers } = this;
+                if (!subscribers[param])
+                    subscribers[param] = new Set();
+                subscribers[param].add(fn);
+                return this.unsubscribe.bind(this, param, fn);
+            };
+            this.unsubscribe = (param, fn) => {
+                let list = getIn(this.subscribers, param);
+                if (list)
+                    list.delete(fn);
+            };
+            this.setState = (partialState) => {
+                let updState = {};
+                objKeys(partialState).forEach(key => {
+                    if (partialState[key] !== this.state[key])
+                        updState[key] = partialState[key];
+                });
+                if (objKeys(updState).length)
+                    super.setState(updState);
+            };
+            this.componentDidUpdate = (propsPrev, statePrev, ...rest) => {
+                let { props, state } = this;
+                let self = { props, propsPrev, state, statePrev };
+                let fns = [];
+                objKeys(this.subscribers).forEach(key => {
+                    let path = key.split('/');
+                    let nm = path[1];
+                    if (nm === 'state' || nm === 'props') {
+                        path = path.slice(2);
+                        if (getIn(self[nm], path) !== getIn(self[nm + 'Prev'], path))
+                            fns.push(...this.subscribers[key]);
+                    }
+                });
+                fns = new Set(fns);
+                for (let fn of fns)
+                    fn();
+                if (super.componentDidUpdate)
+                    return super.componentDidUpdate(propsPrev, statePrev, ...rest);
+            };
+            this.render = () => {
+                return react_1.createElement(Provider, this.providerValue, super.render());
+            };
+            if (initialState || !this.state)
+                this.state = initialState || {};
+        }
+    }
+    return Result;
+}
+exports.withProvider = withProvider;
+function withConsumer(Component, opts = {}) {
+    const { name, keyStarts = '$' } = opts;
+    const context = getContext(name);
+    class Result extends react_1.PureComponent {
+        constructor() {
+            super(...arguments);
+            this.refresh = () => {
+                this.forceUpdate();
+            };
+            this.componentDidMount = () => {
+                this.subscribe(this.props);
+            };
+            this.componentWillUnmount = () => {
+                this.unsubscribe(this.props);
+            };
+            this.componentDidUpdate = (propsPrev) => {
+                this.unsubscribe(propsPrev);
+                this.subscribe(this.props);
+            };
+            this._isSubscribable = (key, props) => {
+                return key.substr(0, keyStarts.length) === keyStarts &&
+                    isString(props[key]) &&
+                    props[key].substr(0, 2) === '&/';
+            };
+            this.subscribe = (props) => {
+                objKeys(props).forEach(key => {
+                    if (this._isSubscribable(key, props))
+                        this.context.subscribe(props[key], this.refresh);
+                });
+            };
+            this.unsubscribe = (props) => {
+                objKeys(props).forEach(key => {
+                    if (this._isSubscribable(key, props))
+                        this.context.unsubscribe(props[key], this.refresh);
+                });
+            };
+            this.render = () => {
+                let provider = { '&': this.context };
+                let props = __rest(this.props, []);
+                objKeys(props).forEach(key => {
+                    if (this._isSubscribable(key, props))
+                        props[key] = getIn(provider, props[key].split('/'));
+                });
+                return react_1.createElement(Component, props);
+            };
+        }
+    }
+    Result.contextType = context;
+    return Result;
+}
+exports.withConsumer = withConsumer;
 //# sourceMappingURL=index.js.map

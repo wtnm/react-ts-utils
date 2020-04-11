@@ -416,6 +416,9 @@ const getContext = memoize((name: string) => createContext(name));
 function withProvider(Component: any, opts: any = {}): any {
   const {name, initialState} = opts;
   const Provider = getContext(name).Provider;
+  let {prototype} = Component;
+  if (!prototype || !prototype.isReactComponent)
+    throw new Error('Only class-components can be used withProvider.');
 
   class Result extends Component<any> {
     subscribers = {};
