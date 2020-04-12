@@ -224,7 +224,6 @@ function getIn(state: any, ...paths: any[]): any {
     if (typeof track === 'function') track = track(res);
     if (!isArray(track)) track = [track];
     for (let j = 0; j < track.length; j++) {
-      //if (isUndefined(res) ) return res;
       if (!isMergeable(res)) return undefined;
       if (isUndefined(track[j])) continue;
       res = res[track[j]];
@@ -459,9 +458,9 @@ function withProvider(Component: any, opts: any = {}): any {
 
       objKeys(this.subscribers).forEach(key => {
         let path = key.split('/');
-        let nm = path[1];
+        let nm = path[0];
         if (nm === 'state' || nm === 'props') {
-          path = path.slice(2);
+          path = path.slice(1);
           if (getIn(self[nm], path) !== getIn(self[nm + 'Prev'], path))
             fns.push(...this.subscribers[key])
         }
@@ -482,7 +481,9 @@ function withProvider(Component: any, opts: any = {}): any {
 }
 
 function withConsumer(Component: any, opts: any = {}) {
-  const {name, keyStarts = '$'} = opts;
+  const {name} = opts;
+  const $maps = {};
+  objKeys(opts.$maps || {}).forEach(key => $maps[key] = opts.$maps[key].split('/').filter(Boolean));
   const context = getContext(name);
 
   class Result extends PureComponent {
@@ -493,44 +494,30 @@ function withConsumer(Component: any, opts: any = {}) {
     };
 
     componentDidMount = () => {
-      this.subscribe(this.props);
+      this.subscribe($maps);
     };
 
     componentWillUnmount = () => {
-      this.unsubscribe(this.props);
-    };
-
-    componentDidUpdate = (propsPrev: any) => {
-      this.unsubscribe(propsPrev);
-      this.subscribe(this.props);
-    };
-
-    private _isSubscribable = (key: string, props: any) => {
-      return key.substr(0, keyStarts.length) === keyStarts &&
-        isString(props[key]) &&
-        props[key].substr(0, 2) === '&/'
+      this.unsubscribe($maps);
     };
 
     subscribe = (props: any) => {
-      objKeys(props).forEach(key => {
-        if (this._isSubscribable(key, props))
-          this.context.subscribe(props[key], this.refresh);
+      objKeys($maps).forEach(key => {
+        this.context.subscribe($maps[key].join('/'), this.refresh);
       })
     };
 
     unsubscribe = (props: any) => {
-      objKeys(props).forEach(key => {
-        if (this._isSubscribable(key, props))
-          this.context.unsubscribe(props[key], this.refresh);
+      objKeys($maps).forEach(key => {
+        this.context.unsubscribe($maps[key].join('/'), this.refresh);
       })
     };
 
     render = () => {
-      let provider = {'&': this.context};
+      let provider = this.context;
       let {...props} = this.props;
-      objKeys(props).forEach(key => {
-        if (this._isSubscribable(key, props))
-          props[key] = getIn(provider, props[key].split('/'))
+      objKeys($maps).forEach(key => {
+        props[key] = $maps[key] ? getIn(provider, $maps[key]) : provider
       });
       return h(Component, props);
     }

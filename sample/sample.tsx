@@ -4,29 +4,19 @@ import {PureComponent, useCallback} from "react";
 
 const {render} = require('react-dom');
 
-function Inner({$_count}: any) {
-  return `inner count ${$_count}`
+function Inner({count}: any) {
+  return `inner count ${count}`
 }
 
-const ConnectedInner = withConsumer(Inner);
+const ConnectedInner = withConsumer(Inner, {$maps: {count: 'state/count'}});
 
-function Inc({$_setState, $_count}: any) {
-  let onClick = useCallback(() => $_setState({count: $_count + 1}), [$_count]);
+function Inc({setState, count}: any) {
+  let onClick = useCallback(() => setState({count: count + 1}), [count]);
   return <button onClick={onClick}>+</button>
 }
 
-const ConnectedInc = withConsumer(Inc);
+const ConnectedInc = withConsumer(Inc, {$maps: {count: 'state/count', setState: "setState"}});
 
-// function Main({$_setState, $but}: any) {
-//   let onClick = useCallback(() =>
-//     $_setState({but: !$but}), [$but]);
-//
-//   return <div>
-//     <button onClick={onClick}>switch params</button>
-//     <ConnectedInner $_count={"&/state/count" + ($but ? '2' : '')}/>
-//     <ConnectedInc $_count="&/state/count" $_setState="&/setState"/>
-//   </div>
-// }
 
 class Main extends PureComponent<any> {
   state: any = {count: 10, count2: 5, but: true};
@@ -39,8 +29,8 @@ class Main extends PureComponent<any> {
     let {but} = this.state;
     return <div>
       <button onClick={this.onSwitchClick}>switch params</button>
-      <ConnectedInner $_count={"&/state/count" + (but ? '2' : '')}/>
-      <ConnectedInc $_count="&/state/count" $_setState="&/setState"/>
+      <ConnectedInner/>
+      <ConnectedInc/>
     </div>
   }
 }
