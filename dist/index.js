@@ -364,7 +364,7 @@ function objSplit(obj, fn, byKey = false) {
 }
 exports.objSplit = objSplit;
 function extendSingleProps(key, base, extend = {}, opts = {}) {
-    let { _$cx, $baseClass, $rootKey, $args = [] } = opts;
+    let { _$cx, $baseClass, $rootKey, $args = [], $asArray } = opts;
     if (react_1.isValidElement(extend))
         return extend;
     if (isFunction(extend))
@@ -384,7 +384,7 @@ function extendSingleProps(key, base, extend = {}, opts = {}) {
         rest.className = _$cx(rest.className);
     if ($baseClass)
         rest.className = _$cx(rest.className || '', `${$baseClass}${key !== $rootKey ? '__' + key : ''}`);
-    return react_1.createElement(Tag, rest);
+    return $asArray ? [Tag, rest] : react_1.createElement(Tag, rest);
 }
 exports.extendSingleProps = extendSingleProps;
 function propsExtender(base = {}, extend = {}, opts = {}) {
