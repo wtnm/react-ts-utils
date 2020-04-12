@@ -429,14 +429,14 @@ function withProvider(Component: any, opts: any = {}): any {
         this.state = initialState || {};
     }
 
-    subscribe = (param: string, fn: any) => {
+    protected _$subscribe = (param: string, fn: any) => {
       let {subscribers} = this;
       if (!subscribers[param]) subscribers[param] = new Set();
       subscribers[param].add(fn);
-      return this.unsubscribe.bind(this, param, fn)
+      return this._$unsubscribe.bind(this, param, fn)
     };
 
-    unsubscribe = (param: string, fn: any) => {
+    protected _$unsubscribe = (param: string, fn: any) => {
       let list = getIn(this.subscribers, param);
       if (list) list.delete(fn);
     };
@@ -502,14 +502,16 @@ function withConsumer(Component: any, opts: any = {}) {
     };
 
     subscribe = (props: any) => {
+      if (!this.context) throw new Error('Provider not found');
       objKeys($maps).forEach(key => {
-        this.context.subscribe($maps[key].join('/'), this.refresh);
+        this.context._$subscribe($maps[key].join('/'), this.refresh);
       })
     };
 
     unsubscribe = (props: any) => {
+      if (!this.context) throw new Error('Provider not found');
       objKeys($maps).forEach(key => {
-        this.context.unsubscribe($maps[key].join('/'), this.refresh);
+        this.context._$unsubscribe($maps[key].join('/'), this.refresh);
       })
     };
 
