@@ -351,6 +351,10 @@ function objSplit(obj: anyObject, fn: Function, byKey: boolean = false) {
   return res;
 }
 
+function splitBy$(obj: anyObject) {
+  objSplit(obj, (k: string) => k[0] === '$' ? 0 : 1, true)
+}
+
 function extendSingleProps(key: string, base: any, extend: any = {}, opts: any = {}) {
   let {_$cx, $baseClass, $rootKey, $args = [], $asArray} = opts;
   if (isValidElement(extend)) return extend;
@@ -529,7 +533,7 @@ function withConsumer(Component: any, opts: any = {}) {
 }
 
 export {isEqual, isMergeable, isUndefined, isNumber, isInteger, isString, isObject, isArray, isFunction, isPromise}
-export {merge, mergeState, objSplit, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn};
+export {merge, mergeState, objSplit, splitBy$, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn};
 export {push2array, moveArrayElems, toArray, deArray}
 export {getContext, memoize, asNumber, extendSingleProps, propsExtender}
 export {withConsumer, withProvider, parseSearch}
