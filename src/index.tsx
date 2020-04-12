@@ -353,7 +353,7 @@ function objSplit(obj: anyObject, fn: Function, byKey: boolean = false) {
 }
 
 function extendSingleProps(key: string, base: any, extend: any = {}, opts: any = {}) {
-  let {_$cx, $baseClass, $rootKey, $args = []} = opts;
+  let {_$cx, $baseClass, $rootKey, $args = [], $asArray} = opts;
   if (isValidElement(extend)) return extend;
   if (isFunction(extend)) return extend(base, key, ...toArray($args));
   let {tagName = '_$tag', wrapName = '_$wrap', defaultTag: Tag = 'div',} = opts;
@@ -371,7 +371,7 @@ function extendSingleProps(key: string, base: any, extend: any = {}, opts: any =
     rest.className = _$cx(rest.className);
   if ($baseClass)
     rest.className = _$cx(rest.className || '', `${$baseClass}${key !== $rootKey ? '__' + key : ''}`);
-  return h(Tag, rest);
+  return $asArray ? [Tag, rest] : h(Tag, rest);
 }
 
 function propsExtender(base: anyObject = {}, extend: anyObject = {}, opts: any = {}) {
