@@ -362,6 +362,10 @@ function objSplit(obj, fn, byKey = false) {
     return res;
 }
 exports.objSplit = objSplit;
+function splitBy$(obj) {
+    objSplit(obj, (k) => k[0] === '$' ? 0 : 1, true);
+}
+exports.splitBy$ = splitBy$;
 function extendSingleProps(key, base, extend = {}, opts = {}) {
     let { _$cx, $baseClass, $rootKey, $args = [], $asArray } = opts;
     if (react_1.isValidElement(extend))
@@ -423,6 +427,15 @@ function parseSearch(search) {
     return searchValue;
 }
 exports.parseSearch = parseSearch;
+function jsonParse(val) {
+    try {
+        return JSON.parse(val);
+    }
+    catch (e) {
+        return val;
+    }
+}
+exports.jsonParse = jsonParse;
 const getContext = memoize((name) => react_1.createContext(name));
 exports.getContext = getContext;
 function withProvider(Component, opts = {}) {

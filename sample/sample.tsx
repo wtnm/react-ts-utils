@@ -28,7 +28,7 @@ class Main extends PureComponent<any> {
   render() {
     let {but} = this.state;
     return <div>
-      <button onClick={this.onSwitchClick}>switch params</button>
+      <button onClick={this.onSwitchClick} children={"switch params"}/>
       <ConnectedInner/>
       <ConnectedInc/>
     </div>

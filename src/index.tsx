@@ -414,6 +414,14 @@ function parseSearch(search: string) {
   return searchValue;
 }
 
+function jsonParse(val:any) {
+  try {
+    return JSON.parse(val)
+  } catch (e) {
+    return val;
+  }
+}
+
 const getContext = memoize((name: string) => createContext(name));
 
 function withProvider(Component: any, opts: any = {}): any {
@@ -536,5 +544,5 @@ export {isEqual, isMergeable, isUndefined, isNumber, isInteger, isString, isObje
 export {merge, mergeState, objSplit, splitBy$, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn};
 export {push2array, moveArrayElems, toArray, deArray}
 export {getContext, memoize, asNumber, extendSingleProps, propsExtender}
-export {withConsumer, withProvider, parseSearch}
+export {withConsumer, withProvider, parseSearch, jsonParse}
 
