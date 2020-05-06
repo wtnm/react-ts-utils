@@ -544,4 +544,8 @@ function withConsumer(Component, opts = {}) {
     return Result;
 }
 exports.withConsumer = withConsumer;
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+exports.sleep = sleep;
 //# sourceMappingURL=index.js.map
