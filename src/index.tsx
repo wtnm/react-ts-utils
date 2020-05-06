@@ -414,7 +414,7 @@ function parseSearch(search: string) {
   return searchValue;
 }
 
-function jsonParse(val:any) {
+function jsonParse(val: any) {
   try {
     return JSON.parse(val)
   } catch (e) {
@@ -540,9 +540,13 @@ function withConsumer(Component: any, opts: any = {}) {
   return Result as any;
 }
 
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export {isEqual, isMergeable, isUndefined, isNumber, isInteger, isString, isObject, isArray, isFunction, isPromise}
 export {merge, mergeState, objSplit, splitBy$, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn};
 export {push2array, moveArrayElems, toArray, deArray}
 export {getContext, memoize, asNumber, extendSingleProps, propsExtender}
-export {withConsumer, withProvider, parseSearch, jsonParse}
+export {withConsumer, withProvider, parseSearch, jsonParse, sleep}
 
