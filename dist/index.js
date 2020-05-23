@@ -247,7 +247,7 @@ function getSetIn(state, value, ...paths) {
 exports.getSetIn = getSetIn;
 //////////////////////////////
 //  object merge functions
-/////////////////////////////
+//////////////////////////////
 function mergeState(state, source, options = {}) {
     const fn = options.noSymbol ? objKeys : objKeysNSymb;
     // let arrayMergeFn: any = false;
@@ -356,6 +356,11 @@ merge.all = function (state, obj2merge, options = {}) {
     else
         return obj2merge.reduce((prev, next) => merge(prev, next, options), state); // merge
 };
+//////////////////////////////
+//  object functions
+//////////////////////////////
+const objMap = (object, fn, track = []) => objKeys(object).reduce((result, key) => ((result[key] = fn(object[key], track.concat(key))) || true) && result, isArray(object) ? [] : {});
+exports.objMap = objMap;
 function objSplit(obj, fn, byKey = false) {
     let res = [];
     objKeys(obj).forEach((key) => setIn(res, obj[key], fn(byKey ? key : obj[key]), key));
@@ -366,6 +371,9 @@ function splitBy$(obj) {
     objSplit(obj, (k) => k[0] === '$' ? 0 : 1, true);
 }
 exports.splitBy$ = splitBy$;
+//////////////////////////////
+//  props extender
+//////////////////////////////
 function extendSingleProps(key, base, extend = {}, opts = {}) {
     let { _$cx, $baseClass, $rootKey, $args = [], $asArray } = opts;
     if (react_1.isValidElement(extend))
@@ -414,6 +422,9 @@ function propsExtender(base = {}, extend = {}, opts = {}) {
     return res;
 }
 exports.propsExtender = propsExtender;
+//////////////////////////////
+//  parse functions
+//////////////////////////////
 function parseSearch(search) {
     let searchValue = {};
     if (search) {
@@ -436,6 +447,9 @@ function jsonParse(val) {
     }
 }
 exports.jsonParse = jsonParse;
+//////////////////////////////
+//  Provider functions
+//////////////////////////////
 const getContext = memoize((name) => react_1.createContext(name));
 exports.getContext = getContext;
 function withProvider(Component, opts = {}) {
@@ -544,8 +558,129 @@ function withConsumer(Component, opts = {}) {
     return Result;
 }
 exports.withConsumer = withConsumer;
+//////////////////////////////
+//  Stuff
+//////////////////////////////
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 exports.sleep = sleep;
+function string2path(path, { str2sym, replace } = {}) {
+    // path = path.replace(symConv(SymData), '/' + symConv(SymData) + '/');
+    if (replace)
+        path = replace(path);
+    path = path.replace(/\/+/g, '/');
+    const result = [];
+    path.split('/').forEach(key => key && (key = (str2sym ? str2sym(key.trim()) : key.trim())) && result.push(key));
+    return result;
+}
+//////////////////////////////
+//  Object resolver functions
+//////////////////////////////
+const isElemRef = (val) => isString(val) && val.trim().substr(0, 2) == '^/';
+exports.isElemRef = isElemRef;
+function testRef(refRes, $_ref, track) {
+    if (isUndefined(refRes))
+        throw new Error('Reference "' + $_ref + '" leads to undefined object\'s property in path: ' + track.join('/'));
+    return true;
+}
+function getInWithCheck(refRes, path) {
+    let elems = refRes['^'];
+    let whileBreak = false;
+    while (!whileBreak) {
+        whileBreak = true;
+        for (let j = 0; j < path.length; j++) {
+            refRes = getIn(refRes, path[j]);
+            if (isElemRef(refRes)) {
+                path = string2path(refRes).concat(path.slice(j + 1));
+                refRes = { '^': elems };
+                whileBreak = false;
+                break;
+            }
+            if (isFunction(refRes) && j + 1 !== path.length) { // check if there is a function
+                refRes = refRes(elems, path.slice(j + 1));
+                break;
+            }
+            if (isUndefined(refRes))
+                break;
+        }
+    }
+    return refRes;
+}
+function objectDerefer(_elements, obj2deref, track = []) {
+    if (!isMergeable(obj2deref))
+        return obj2deref;
+    let { $_ref = '' } = obj2deref, restObj = __rest(obj2deref, ["$_ref"]);
+    $_ref = $_ref.split(':');
+    const objs2merge = [];
+    for (let i = 0; i < $_ref.length; i++) {
+        if (!$_ref[i])
+            continue;
+        let path = string2path($_ref[i]);
+        if (path[0] !== '^')
+            throw new Error('Can reffer only to ^');
+        let refRes = getInWithCheck({ '^': _elements }, path);
+        testRef(refRes, $_ref[i], track.concat('@' + i));
+        if (isMergeable(refRes))
+            refRes = objectDerefer(_elements, refRes, track.concat('@' + i));
+        objs2merge.push(refRes);
+    }
+    let result = isArray(obj2deref) ? [] : {};
+    for (let i = 0; i < objs2merge.length; i++)
+        result = merge(result, objs2merge[i]);
+    return merge(result, objMap(restObj, objectDerefer.bind(null, _elements), track));
+    //objKeys(restObj).forEach(key => result[key] = isMergeable(restObj[key]) ? objectDerefer(_objects, restObj[key]) : restObj[key]);
+}
+exports.objectDerefer = objectDerefer;
+function skipKey(key, obj) {
+    return key.substr(0, 2) == '_$' || obj['_$skipKeys'] && ~obj['_$skipKeys'].indexOf(key);
+}
+exports.skipKey = skipKey;
+const convRef = (_elements, refs, track = [], prefix = '') => {
+    const _objs = { '^': _elements };
+    return deArray(refs.split('|').map((ref, i) => {
+        ref = ref.trim();
+        if (isElemRef(ref))
+            prefix = ref.substr(0, ref.lastIndexOf('/') + 1);
+        else
+            ref = prefix + ref;
+        ref = ref.split(':');
+        let result;
+        for (let i = 0; i < ref.length; i++) {
+            let r = ref[i];
+            if (!r)
+                continue;
+            if (!isElemRef(r))
+                r = prefix + r;
+            let refRes = getInWithCheck(_objs, string2path(r));
+            testRef(refRes, r, track.concat('@' + i));
+            result = result ? merge(result, refRes) : refRes;
+        }
+        return result;
+    }));
+};
+exports.convRef = convRef;
+function objectResolver(_elements, obj2resolve, track = []) {
+    if (isElemRef(obj2resolve))
+        return convRef(_elements, obj2resolve, track);
+    if (!isMergeable(obj2resolve))
+        return obj2resolve;
+    const _objs = { '^': _elements };
+    const result = objectDerefer(_elements, obj2resolve);
+    const retResult = isArray(result) ? [] : {};
+    objKeys(result).forEach((key) => {
+        let value = result[key];
+        if (isElemRef(value)) {
+            value = convRef(_elements, value, track);
+            if (key !== '$' && !skipKey(key, result) && (isFunction(value) || isArray(value) && value.every(isFunction)))
+                value = { $: value };
+        }
+        if (!skipKey(key, result))
+            retResult[key] = objectResolver(_elements, value, track.concat(key));
+        else
+            retResult[key] = value;
+    });
+    return retResult;
+}
+exports.objectResolver = objectResolver;
 //# sourceMappingURL=index.js.map
