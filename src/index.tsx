@@ -417,7 +417,7 @@ function propsExtender(base: anyObject = {}, extend: anyObject = {}, opts: any =
 //  parse functions
 //////////////////////////////
 
-function parseSearch(search: string) {
+function parseSearch(search: string): any {
   let searchValue = {};
 
   if (search) {
@@ -625,7 +625,7 @@ function objectDerefer(_elements: any, obj2deref: any, track: string[] = []) { /
   for (let i = 0; i < $_ref.length; i++) {
     if (!$_ref[i]) continue;
     let path = string2path($_ref[i]);
-    if (path[0] !== '^') throw new Error('Can reffer only to ^');
+    if (path[0] !== '^') throw new Error('Can reffer only to "^"');
     let refRes = getInWithCheck({'^': _elements}, path);
     testRef(refRes, $_ref[i], track.concat('@' + i));
     if (isMergeable(refRes)) refRes = objectDerefer(_elements, refRes, track.concat('@' + i));
@@ -656,7 +656,11 @@ const convRef = (_elements: any, refs: string, track: any[] = [], prefix = '') =
       if (!isElemRef(r)) r = prefix + r;
       let refRes = getInWithCheck(_objs, string2path(r));
       testRef(refRes, r, track.concat('@' + i));
-      result = result ? merge(result, refRes) : refRes;
+      if (refRes._$setSelfIn && result) {
+        let {_$setSelfIn, ...restRes} = refRes;
+        result = merge(restRes, result, {path: _$setSelfIn});
+      } else
+        result = result ? merge(result, refRes) : refRes;
     }
     return result;
   }));
@@ -665,7 +669,7 @@ const convRef = (_elements: any, refs: string, track: any[] = [], prefix = '') =
 function objectResolver(_elements: any, obj2resolve: any, track: string[] = []): any {
   if (isElemRef(obj2resolve)) return convRef(_elements, obj2resolve, track);
   if (!isMergeable(obj2resolve)) return obj2resolve;
-  const _objs = {'^': _elements};
+  // const _objs = {'^': _elements};
   const result = objectDerefer(_elements, obj2resolve);
   const retResult = isArray(result) ? [] : {};
   objKeys(result).forEach((key) => {
