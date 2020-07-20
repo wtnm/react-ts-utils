@@ -618,7 +618,7 @@ function objectDerefer(_elements, obj2deref, track = []) {
             continue;
         let path = string2path($_ref[i]);
         if (path[0] !== '^')
-            throw new Error('Can reffer only to ^');
+            throw new Error('Can reffer only to "^"');
         let refRes = getInWithCheck({ '^': _elements }, path);
         testRef(refRes, $_ref[i], track.concat('@' + i));
         if (isMergeable(refRes))
@@ -626,8 +626,14 @@ function objectDerefer(_elements, obj2deref, track = []) {
         objs2merge.push(refRes);
     }
     let result = isArray(obj2deref) ? [] : {};
-    for (let i = 0; i < objs2merge.length; i++)
-        result = merge(result, objs2merge[i]);
+    for (let i = 0; i < objs2merge.length; i++) {
+        if (objs2merge[i]._$setSelfIn && result) {
+            let _a = objs2merge[i], { _$setSelfIn } = _a, restRes = __rest(_a, ["_$setSelfIn"]);
+            result = merge(restRes, result, { path: _$setSelfIn });
+        }
+        else
+            result = merge(result, objs2merge[i]);
+    }
     return merge(result, objMap(restObj, objectDerefer.bind(null, _elements), track));
     //objKeys(restObj).forEach(key => result[key] = isMergeable(restObj[key]) ? objectDerefer(_objects, restObj[key]) : restObj[key]);
 }
@@ -654,7 +660,12 @@ const convRef = (_elements, refs, track = [], prefix = '') => {
                 r = prefix + r;
             let refRes = getInWithCheck(_objs, string2path(r));
             testRef(refRes, r, track.concat('@' + i));
-            result = result ? merge(result, refRes) : refRes;
+            if (refRes._$setSelfIn && result) {
+                let { _$setSelfIn } = refRes, restRes = __rest(refRes, ["_$setSelfIn"]);
+                result = merge(restRes, result, { path: _$setSelfIn });
+            }
+            else
+                result = result ? merge(result, refRes) : refRes;
         }
         return result;
     }));
@@ -665,7 +676,7 @@ function objectResolver(_elements, obj2resolve, track = []) {
         return convRef(_elements, obj2resolve, track);
     if (!isMergeable(obj2resolve))
         return obj2resolve;
-    const _objs = { '^': _elements };
+    // const _objs = {'^': _elements};
     const result = objectDerefer(_elements, obj2resolve);
     const retResult = isArray(result) ? [] : {};
     objKeys(result).forEach((key) => {

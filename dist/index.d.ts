@@ -59,7 +59,7 @@ declare function objSplit(obj: anyObject, fn: Function, byKey?: boolean): any[];
 declare function splitBy$(obj: anyObject): void;
 declare function extendSingleProps(key: string, base: any, extend?: any, opts?: any): any;
 declare function propsExtender(base?: anyObject, extend?: anyObject, opts?: any): anyObject;
-declare function parseSearch(search: string): {};
+declare function parseSearch(search: string): any;
 declare function jsonParse(val: any): any;
 declare const getContext: (...args: any[]) => any;
 declare function withProvider(Component: any, opts?: any): any;
