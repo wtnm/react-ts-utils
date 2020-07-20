@@ -633,7 +633,13 @@ function objectDerefer(_elements: any, obj2deref: any, track: string[] = []) { /
   }
   let result = isArray(obj2deref) ? [] : {};
 
-  for (let i = 0; i < objs2merge.length; i++) result = merge(result, objs2merge[i]);
+  for (let i = 0; i < objs2merge.length; i++) {
+    if (objs2merge[i]._$setSelfIn && result) {
+      let {_$setSelfIn, ...restRes} = objs2merge[i];
+      result = merge(restRes, result, {path: _$setSelfIn});
+    } else
+      result = merge(result, objs2merge[i]);
+  }
   return merge(result, objMap(restObj, objectDerefer.bind(null, _elements), track));
   //objKeys(restObj).forEach(key => result[key] = isMergeable(restObj[key]) ? objectDerefer(_objects, restObj[key]) : restObj[key]);
 }

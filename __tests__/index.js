@@ -27,6 +27,13 @@ describe('object resolver tests', function () {
         'f1.bind': [4],
         f2: '^/funcs/two',
         'f2.bind': [6, 10],
+      },
+      third: {
+        _$setSelfIn: 'sub/prop1',
+        sub: {
+          prop1: false,
+          prop2: true
+        }
       }
     }
   };
@@ -47,11 +54,13 @@ describe('object resolver tests', function () {
       },
       _some: '^/funcs/two',
       _more: {
-        f3: '^/funcs/three',
         $_maps: {value: '@/value'}
       },
       $fields: [{$_maps: {length: '@/length'}}],
       $_maps: {value: '@/value'}
+    },
+    selfIf: {
+      $_ref: '^/preset/second:^/parts/third',
     }
   };
 
@@ -66,28 +75,12 @@ describe('object resolver tests', function () {
     expect(obj.part.first.three).to.be.equal('three value');
   });
 
-  // it('test api.objectResolver', function () {
-  //
-  //   let obj = apiLib.objectResolver(elements, exampleObj);
-  //   expect(obj.func).to.be.equal(elements.funcs.two);
-  //   expect(obj.part.f1).to.be.equal(elements.funcs.one);
-  //   expect(obj.part['f1.bind']).to.be.eql([1]);
-  //   expect(obj.part.f2).to.be.equal(elements.funcs.two);
-  //   expect(obj.part['f2.bind']).to.be.eql([6, 10]);
-  //   expect(obj.part._some).to.be.equal(elements.funcs.two);
-  //   expect(obj.part._more.f3).to.be.equal('^/funcs/three');
-  //
-  //   obj2SymData = apiLib.objectResolver(elements, exampleObj);
-  //   expect(obj2SymData.func).to.be.equal(elements.funcs.two);
-  //   expect(obj2SymData.part.f1).to.be.equal(elements.funcs.one);
-  //   expect(obj2SymData.part['f1.bind']).to.be.eql([1]);
-  //   expect(obj2SymData.part.f2).to.be.equal(elements.funcs.two);
-  //   expect(obj2SymData.part['f2.bind']).to.be.eql([6, 10]);
-  //   expect(obj2SymData.part.first.one).to.be.equal('one value');
-  //   expect(obj2SymData.part.first.three).to.be.equal('three value');
-  //   expect(obj2SymData.part._some).to.be.equal(elements.funcs.two);
-  //   expect(obj2SymData.part._more.f3).to.be.equal('^/funcs/three');
-  // });
+  it('test _$setSelfIn', function () {
+    let obj = main.objectResolver(objects, exampleObj);
+    expect(obj.selfIf.sub.prop1.two).to.be.equal("two value");
+    expect(obj.part._some.$.name).to.be.equal('two');
+    // console.log('obj', obj);
+  });
 });
 
 describe('object manipulations tests', function () {
