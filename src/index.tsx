@@ -1,6 +1,6 @@
 /** @jsx h */
 
-import {createElement as h, isValidElement, createContext, PureComponent, Component} from 'react';
+import {createElement as h, isValidElement, createContext, PureComponent, forwardRef} from 'react';
 
 export interface anyObject {
   [key: string]: any;
@@ -413,6 +413,79 @@ function propsExtender(base: anyObject = {}, extend: anyObject = {}, opts: any =
 }
 
 
+
+//////////////////////////////
+//  checkbox components
+//////////////////////////////
+
+const Checkbox = forwardRef(({
+                               $extend = {}, $baseClass, children = [], label,
+                               type = "checkbox", _$cx, className = "", ['data-key']: dataKey, ...rest
+                             }: any, ref) => {
+  const baseProps = {
+    'input': {_$tag: 'input', ref, type, ...rest},
+    'label': {_$tag: 'span', children: [label]}
+  };
+  let childrenRes = propsExtender(baseProps, $extend, {skipKeys: ['checkbox'], _$cx, $baseClass});
+  let {input: inputTag, label: labelTag, ...restChildren} = childrenRes;
+  let classMods: string[] = [];
+  objKeys(rest).forEach(key => {
+    if (key[0] !== '$' && (rest[key] === true || rest[key] === 'true'))
+      classMods.push('_' + key);
+  });
+  className = _$cx(className, classMods);
+  const rootProps = {
+    'checkbox': {
+      _$tag: 'label',
+      className,
+      children: [inputTag, labelTag, ...(objKeys(restChildren).map(k => restChildren[k])), ...toArray(children)]
+    }
+  };
+  return propsExtender(rootProps, $extend, {onlyKeys: ['checkbox'], _$cx, $baseClass, $rootKey: 'checkbox'}).checkbox;
+});
+
+
+class Checkboxes extends PureComponent<any, any> {
+  render() {
+    let {
+      $enum = [], $enumExten = {}, $setRef, $prefixRefName = '', $baseClass, $extend = {},
+      _$tag = 'div', type = "radio", className = "", value = [], name, _$cx, staticProps, ...rest
+    } = this.props;
+    value = toArray(value);
+    if (name) name = type === 'radio' ? name : name + '[]';
+    let opts = {$args: [this], _$cx};
+    let enumRes = {};
+    $enum.map((val: any) => {
+      let baseProps = {...staticProps};
+      baseProps.checked = !!~value.indexOf(val);
+      baseProps.type = type;
+      baseProps.name = name;
+      baseProps.value = val;
+      baseProps.label = val;
+      baseProps._$tag = baseProps._$tag || Checkbox;
+      baseProps._$cx = baseProps._$cx || _$cx;
+      if ($setRef) baseProps.ref = $setRef($prefixRefName + name);
+      if ($baseClass) baseProps.$baseClass = $baseClass + '-item';
+      if ($enumExten[val]) Object.assign(baseProps, isString($enumExten[val]) ? {label: $enumExten[val]} : $enumExten[val]);
+      enumRes[val] = baseProps;
+    });
+    enumRes = propsExtender(enumRes, $extend, opts);
+    let children = $enum.map((val: any) => {
+      let res = enumRes[val];
+      delete enumRes[val];
+      return res;
+    });
+    let restRes = objKeys(enumRes).map(val => enumRes[val]).filter(Boolean);
+    push2array(children, restRes);
+
+    if ($baseClass) className = ((className || '') + ' ' + $baseClass).trim();
+    (rest as any).className = _$cx ? _$cx(className) : className;
+
+    return h(_$tag, rest, children);
+  }
+}
+
+
 //////////////////////////////
 //  parse functions
 //////////////////////////////
@@ -695,6 +768,6 @@ function objectResolver(_elements: any, obj2resolve: any, track: string[] = []):
 export {isEqual, isMergeable, isUndefined, isNumber, isInteger, isString, isObject, isArray, isFunction, isPromise}
 export {merge, mergeState, objSplit, splitBy$, objMap, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn};
 export {push2array, moveArrayElems, toArray, deArray}
-export {getContext, memoize, asNumber, extendSingleProps, propsExtender}
+export {getContext, memoize, asNumber, extendSingleProps, propsExtender, Checkbox, Checkboxes}
 export {withConsumer, withProvider, parseSearch, jsonParse, sleep}
 export {isElemRef, objectDerefer, objectResolver, convRef, skipKey}

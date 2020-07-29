@@ -423,6 +423,73 @@ function propsExtender(base = {}, extend = {}, opts = {}) {
 }
 exports.propsExtender = propsExtender;
 //////////////////////////////
+//  checkbox components
+//////////////////////////////
+const Checkbox = react_1.forwardRef((_a, ref) => {
+    var { $extend = {}, $baseClass, children = [], label, type = "checkbox", _$cx, className = "", ['data-key']: dataKey } = _a, rest = __rest(_a, ["$extend", "$baseClass", "children", "label", "type", "_$cx", "className", 'data-key']);
+    const baseProps = {
+        'input': Object.assign({ _$tag: 'input', ref, type }, rest),
+        'label': { _$tag: 'span', children: [label] }
+    };
+    let childrenRes = propsExtender(baseProps, $extend, { skipKeys: ['checkbox'], _$cx, $baseClass });
+    let { input: inputTag, label: labelTag } = childrenRes, restChildren = __rest(childrenRes, ["input", "label"]);
+    let classMods = [];
+    objKeys(rest).forEach(key => {
+        if (key[0] !== '$' && (rest[key] === true || rest[key] === 'true'))
+            classMods.push('_' + key);
+    });
+    className = _$cx(className, classMods);
+    const rootProps = {
+        'checkbox': {
+            _$tag: 'label',
+            className,
+            children: [inputTag, labelTag, ...(objKeys(restChildren).map(k => restChildren[k])), ...toArray(children)]
+        }
+    };
+    return propsExtender(rootProps, $extend, { onlyKeys: ['checkbox'], _$cx, $baseClass, $rootKey: 'checkbox' }).checkbox;
+});
+exports.Checkbox = Checkbox;
+class Checkboxes extends react_1.PureComponent {
+    render() {
+        let _a = this.props, { $enum = [], $enumExten = {}, $setRef, $prefixRefName = '', $baseClass, $extend = {}, _$tag = 'div', type = "radio", className = "", value = [], name, _$cx, staticProps } = _a, rest = __rest(_a, ["$enum", "$enumExten", "$setRef", "$prefixRefName", "$baseClass", "$extend", "_$tag", "type", "className", "value", "name", "_$cx", "staticProps"]);
+        value = toArray(value);
+        if (name)
+            name = type === 'radio' ? name : name + '[]';
+        let opts = { $args: [this], _$cx };
+        let enumRes = {};
+        $enum.map((val) => {
+            let baseProps = Object.assign({}, staticProps);
+            baseProps.checked = !!~value.indexOf(val);
+            baseProps.type = type;
+            baseProps.name = name;
+            baseProps.value = val;
+            baseProps.label = val;
+            baseProps._$tag = baseProps._$tag || Checkbox;
+            baseProps._$cx = baseProps._$cx || _$cx;
+            if ($setRef)
+                baseProps.ref = $setRef($prefixRefName + name);
+            if ($baseClass)
+                baseProps.$baseClass = $baseClass + '-item';
+            if ($enumExten[val])
+                Object.assign(baseProps, isString($enumExten[val]) ? { label: $enumExten[val] } : $enumExten[val]);
+            enumRes[val] = baseProps;
+        });
+        enumRes = propsExtender(enumRes, $extend, opts);
+        let children = $enum.map((val) => {
+            let res = enumRes[val];
+            delete enumRes[val];
+            return res;
+        });
+        let restRes = objKeys(enumRes).map(val => enumRes[val]).filter(Boolean);
+        push2array(children, restRes);
+        if ($baseClass)
+            className = ((className || '') + ' ' + $baseClass).trim();
+        rest.className = _$cx ? _$cx(className) : className;
+        return react_1.createElement(_$tag, rest, children);
+    }
+}
+exports.Checkboxes = Checkboxes;
+//////////////////////////////
 //  parse functions
 //////////////////////////////
 function parseSearch(search) {

@@ -1,4 +1,5 @@
 /** @jsx h */
+import { PureComponent } from 'react';
 export interface anyObject {
     [key: string]: any;
     [key: number]: any;
@@ -59,6 +60,10 @@ declare function objSplit(obj: anyObject, fn: Function, byKey?: boolean): any[];
 declare function splitBy$(obj: anyObject): void;
 declare function extendSingleProps(key: string, base: any, extend?: any, opts?: any): any;
 declare function propsExtender(base?: anyObject, extend?: anyObject, opts?: any): anyObject;
+declare const Checkbox: import("react").ForwardRefExoticComponent<Pick<any, string | number | symbol> & import("react").RefAttributes<unknown>>;
+declare class Checkboxes extends PureComponent<any, any> {
+    render(): import("react").DetailedReactHTMLElement<import("react").InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
+}
 declare function parseSearch(search: string): any;
 declare function jsonParse(val: any): any;
 declare const getContext: (...args: any[]) => any;
@@ -73,6 +78,6 @@ declare function objectResolver(_elements: any, obj2resolve: any, track?: string
 export { isEqual, isMergeable, isUndefined, isNumber, isInteger, isString, isObject, isArray, isFunction, isPromise };
 export { merge, mergeState, objSplit, splitBy$, objMap, objKeys, objKeysNSymb, delIn, setIn, hasIn, getIn, getSetIn };
 export { push2array, moveArrayElems, toArray, deArray };
-export { getContext, memoize, asNumber, extendSingleProps, propsExtender };
+export { getContext, memoize, asNumber, extendSingleProps, propsExtender, Checkbox, Checkboxes };
 export { withConsumer, withProvider, parseSearch, jsonParse, sleep };
 export { isElemRef, objectDerefer, objectResolver, convRef, skipKey };
