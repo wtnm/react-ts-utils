@@ -56,8 +56,12 @@ describe('object resolver tests', function () {
       _more: {
         $_maps: {value: '@/value'}
       },
+      _$some: '^/funcs/two',
+      _$someMore: {$: '^/funcs/two'},
       $fields: [{$_maps: {length: '@/length'}}],
-      $_maps: {value: '@/value'}
+      $_maps: {value: '@/value'},
+      skip: {$: '^/funcs/two'},
+      _$skipKeys: ['skip']
     },
     selfIf: {
       $_ref: '^/preset/second:^/parts/third',
@@ -66,19 +70,22 @@ describe('object resolver tests', function () {
 
   it('test objectDerefer', function () {
     let obj = main.objectDerefer(objects, exampleObj);
-    expect(obj.func).to.be.equal('^/funcs/two');
-    expect(obj.part.f1).to.be.equal('^/funcs/one');
+    expect(obj.func).to.be.equal(objects.funcs.two);
+    expect(obj.part.f1).to.be.equal(objects.funcs.one);
     expect(obj.part['f1.bind']).to.be.eql([1]);
-    expect(obj.part.f2).to.be.equal('^/funcs/two');
+    expect(obj.part.f2).to.be.equal(objects.funcs.two);
     expect(obj.part['f2.bind']).to.be.eql([6, 10]);
     expect(obj.part.first.one).to.be.equal('one value');
     expect(obj.part.first.three).to.be.equal('three value');
+    expect(obj.part._$some).to.be.equal(objects.funcs.two);
+    expect(obj.part._$someMore.$).to.be.equal('^/funcs/two');
+    expect(obj.part.skip.$).to.be.equal('^/funcs/two');
   });
 
   it('test _$setSelfIn', function () {
-    let obj = main.objectResolver(objects, exampleObj);
+    let obj = main.objectDerefer(objects, exampleObj);
     expect(obj.selfIf.sub.prop1.two).to.be.equal("two value");
-    expect(obj.part._some.$.name).to.be.equal('two');
+    // expect(obj.part._some.$.name).to.be.equal('two');
     // console.log('obj', obj);
   });
 });

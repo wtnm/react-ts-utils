@@ -380,7 +380,7 @@ function extendSingleProps(key, base, extend = {}, opts = {}) {
         return extend;
     if (isFunction(extend))
         return extend(base, key, ...toArray($args));
-    let { tagName = '_$tag', wrapName = '_$wrap', defaultTag: Tag = 'div', } = opts;
+    let { tagName = '_$useTag', wrapName = '_$wrap', defaultTag: Tag = 'div', } = opts;
     let rest = base ? Object.assign(Object.assign({ key, 'data-key': key }, base), extend) : Object.assign({ key, 'data-key': key }, extend);
     if (rest[tagName]) {
         Tag = rest[tagName];
@@ -428,8 +428,8 @@ exports.propsExtender = propsExtender;
 const Checkbox = react_1.forwardRef((_a, ref) => {
     var { $extend = {}, $baseClass, children = [], label, type = "checkbox", _$cx, className = "", ['data-key']: dataKey } = _a, rest = __rest(_a, ["$extend", "$baseClass", "children", "label", "type", "_$cx", "className", 'data-key']);
     const baseProps = {
-        'input': Object.assign({ _$tag: 'input', ref, type }, rest),
-        'label': { _$tag: 'span', children: [label] }
+        'input': Object.assign({ _$useTag: 'input', ref, type }, rest),
+        'label': { _$useTag: 'span', children: [label] }
     };
     let childrenRes = propsExtender(baseProps, $extend, { skipKeys: ['checkbox'], _$cx, $baseClass });
     let { input: inputTag, label: labelTag } = childrenRes, restChildren = __rest(childrenRes, ["input", "label"]);
@@ -441,7 +441,7 @@ const Checkbox = react_1.forwardRef((_a, ref) => {
     className = _$cx(className, classMods);
     const rootProps = {
         'checkbox': {
-            _$tag: 'label',
+            _$useTag: 'label',
             className,
             children: [inputTag, labelTag, ...(objKeys(restChildren).map(k => restChildren[k])), ...toArray(children)]
         }
@@ -451,7 +451,7 @@ const Checkbox = react_1.forwardRef((_a, ref) => {
 exports.Checkbox = Checkbox;
 class Checkboxes extends react_1.PureComponent {
     render() {
-        let _a = this.props, { $enum = [], $enumExten = {}, $setRef, $prefixRefName = '', $baseClass, $extend = {}, _$tag = 'div', type = "radio", className = "", value = [], name, _$cx, staticProps } = _a, rest = __rest(_a, ["$enum", "$enumExten", "$setRef", "$prefixRefName", "$baseClass", "$extend", "_$tag", "type", "className", "value", "name", "_$cx", "staticProps"]);
+        let _a = this.props, { $enum = [], $enumExten = {}, $setRef, $prefixRefName = '', $baseClass, $extend = {}, _$useTag = 'div', type = "radio", className = "", value = [], name, _$cx, staticProps } = _a, rest = __rest(_a, ["$enum", "$enumExten", "$setRef", "$prefixRefName", "$baseClass", "$extend", "_$useTag", "type", "className", "value", "name", "_$cx", "staticProps"]);
         value = toArray(value);
         if (name)
             name = type === 'radio' ? name : name + '[]';
@@ -464,7 +464,7 @@ class Checkboxes extends react_1.PureComponent {
             baseProps.name = name;
             baseProps.value = val;
             baseProps.label = val;
-            baseProps._$tag = baseProps._$tag || Checkbox;
+            baseProps._$useTag = baseProps._$useTag || Checkbox;
             baseProps._$cx = baseProps._$cx || _$cx;
             if ($setRef)
                 baseProps.ref = $setRef($prefixRefName + name);
@@ -485,7 +485,7 @@ class Checkboxes extends react_1.PureComponent {
         if ($baseClass)
             className = ((className || '') + ' ' + $baseClass).trim();
         rest.className = _$cx ? _$cx(className) : className;
-        return react_1.createElement(_$tag, rest, children);
+        return react_1.createElement(_$useTag, rest, children);
     }
 }
 exports.Checkboxes = Checkboxes;
@@ -674,26 +674,33 @@ function getInWithCheck(refRes, path) {
     }
     return refRes;
 }
-function objectDerefer(_elements, obj2deref, track = []) {
-    if (!isMergeable(obj2deref))
-        return obj2deref;
-    let { $_ref = '' } = obj2deref, restObj = __rest(obj2deref, ["$_ref"]);
+function skipKey(key, obj, opts = {}) {
+    let { start = '_$', field = '_$skipKeys' } = opts;
+    if (!isString(key))
+        return false;
+    return key === field || key.substr(0, start.length) == start || obj && isArray(obj[field]) && ~obj[field].indexOf(key);
+}
+exports.skipKey = skipKey;
+function processRef($_ref, _elements, opts, track) {
     $_ref = $_ref.split(':');
+    let { isRef } = opts;
     const objs2merge = [];
     for (let i = 0; i < $_ref.length; i++) {
         if (!$_ref[i])
             continue;
+        if (!isRef($_ref[i]))
+            throw new Error(`Non-ref value "${$_ref[i]}" in path "${track.concat('/')}"`);
         let path = string2path($_ref[i]);
-        if (path[0] !== '^')
-            throw new Error('Can reffer only to "^"');
         let refRes = getInWithCheck({ '^': _elements }, path);
         testRef(refRes, $_ref[i], track.concat('@' + i));
         if (isMergeable(refRes))
-            refRes = objectDerefer(_elements, refRes, track.concat('@' + i));
+            refRes = objectDerefer(_elements, refRes, opts, track.concat('@' + i));
         objs2merge.push(refRes);
     }
-    let result = isArray(obj2deref) ? [] : {};
-    for (let i = 0; i < objs2merge.length; i++) {
+    if (objs2merge.length <= 1)
+        return objs2merge[0];
+    let result = objs2merge[0];
+    for (let i = 1; i < objs2merge.length; i++) {
         if (objs2merge[i]._$setSelfIn && result) {
             let _a = objs2merge[i], { _$setSelfIn } = _a, restRes = __rest(_a, ["_$setSelfIn"]);
             result = merge(restRes, result, { path: _$setSelfIn });
@@ -701,64 +708,30 @@ function objectDerefer(_elements, obj2deref, track = []) {
         else
             result = merge(result, objs2merge[i]);
     }
-    return merge(result, objMap(restObj, objectDerefer.bind(null, _elements), track));
+    return result;
+}
+function objectDerefer(_elements, obj2deref, opts = {}, track = [], parent) {
+    let { isRef = isElemRef, refHandler, skipKey: skipFn = skipKey } = opts;
+    opts = { isRef, refHandler, skipKey: skipFn };
+    if (isRef(obj2deref)) {
+        let result = refHandler ? refHandler(_elements, obj2deref, opts, track, parent) : obj2deref;
+        if (isRef(result))
+            result = processRef(result, _elements, opts, track);
+        return result;
+    }
+    if (!isMergeable(obj2deref))
+        return obj2deref;
+    if (isArray(obj2deref))
+        return obj2deref.map((obj, i) => objectDerefer(_elements, obj, opts, track.concat(i), obj2deref));
+    let { $_ref = '' } = obj2deref, restObj = __rest(obj2deref, ["$_ref"]);
+    let result = processRef($_ref, _elements, opts, track);
+    return merge(result, objMap(restObj, (obj, tr) => {
+        let key = tr[tr.length - 1];
+        if (!isRef(obj) && skipFn(key, obj2deref))
+            return obj;
+        return objectDerefer(_elements, obj, opts, tr, obj2deref);
+    }, track));
     //objKeys(restObj).forEach(key => result[key] = isMergeable(restObj[key]) ? objectDerefer(_objects, restObj[key]) : restObj[key]);
 }
 exports.objectDerefer = objectDerefer;
-function skipKey(key, obj) {
-    return key.substr(0, 2) == '_$' || obj['_$skipKeys'] && ~obj['_$skipKeys'].indexOf(key);
-}
-exports.skipKey = skipKey;
-const convRef = (_elements, refs, track = [], prefix = '') => {
-    const _objs = { '^': _elements };
-    return deArray(refs.split('|').map((ref, i) => {
-        ref = ref.trim();
-        if (isElemRef(ref))
-            prefix = ref.substr(0, ref.lastIndexOf('/') + 1);
-        else
-            ref = prefix + ref;
-        ref = ref.split(':');
-        let result;
-        for (let i = 0; i < ref.length; i++) {
-            let r = ref[i];
-            if (!r)
-                continue;
-            if (!isElemRef(r))
-                r = prefix + r;
-            let refRes = getInWithCheck(_objs, string2path(r));
-            testRef(refRes, r, track.concat('@' + i));
-            if (refRes._$setSelfIn && result) {
-                let { _$setSelfIn } = refRes, restRes = __rest(refRes, ["_$setSelfIn"]);
-                result = merge(restRes, result, { path: _$setSelfIn });
-            }
-            else
-                result = result ? merge(result, refRes) : refRes;
-        }
-        return result;
-    }));
-};
-exports.convRef = convRef;
-function objectResolver(_elements, obj2resolve, track = []) {
-    if (isElemRef(obj2resolve))
-        return convRef(_elements, obj2resolve, track);
-    if (!isMergeable(obj2resolve))
-        return obj2resolve;
-    // const _objs = {'^': _elements};
-    const result = objectDerefer(_elements, obj2resolve);
-    const retResult = isArray(result) ? [] : {};
-    objKeys(result).forEach((key) => {
-        let value = result[key];
-        if (isElemRef(value)) {
-            value = convRef(_elements, value, track);
-            if (key !== '$' && !skipKey(key, result) && (isFunction(value) || isArray(value) && value.every(isFunction)))
-                value = { $: value };
-        }
-        if (!skipKey(key, result))
-            retResult[key] = objectResolver(_elements, value, track.concat(key));
-        else
-            retResult[key] = value;
-    });
-    return retResult;
-}
-exports.objectResolver = objectResolver;
 //# sourceMappingURL=index.js.map
