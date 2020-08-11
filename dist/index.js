@@ -368,7 +368,7 @@ function objSplit(obj, fn, byKey = false) {
 }
 exports.objSplit = objSplit;
 function splitBy$(obj) {
-    objSplit(obj, (k) => k[0] === '$' ? 0 : 1, true);
+    return objSplit(obj, (k) => k[0] === '$' ? 0 : 1, true);
 }
 exports.splitBy$ = splitBy$;
 //////////////////////////////
@@ -641,10 +641,11 @@ function string2path(path, { str2sym, replace } = {}) {
     path.split('/').forEach(key => key && (key = (str2sym ? str2sym(key.trim()) : key.trim())) && result.push(key));
     return result;
 }
+exports.string2path = string2path;
 //////////////////////////////
 //  Object resolver functions
 //////////////////////////////
-const isElemRef = (val) => isString(val) && val.trim().substr(0, 2) == '^/';
+const isElemRef = (val) => isString(val) && (val.substr(0, 2) == '^/' || val.substr(0, 2) == '^.');
 exports.isElemRef = isElemRef;
 function testRef(refRes, $_ref, track) {
     if (isUndefined(refRes))
@@ -681,20 +682,28 @@ function skipKey(key, obj, opts = {}) {
     return key === field || key.substr(0, start.length) == start || obj && isArray(obj[field]) && ~obj[field].indexOf(key);
 }
 exports.skipKey = skipKey;
-function processRef($_ref, _elements, opts, track) {
-    $_ref = $_ref.split(':');
+function processRef($_refs, _elements, opts, track, baseObj) {
+    $_refs = $_refs.split(':');
     let { isRef } = opts;
     const objs2merge = [];
-    for (let i = 0; i < $_ref.length; i++) {
-        if (!$_ref[i])
+    for (let i = 0; i < $_refs.length; i++) {
+        if (!$_refs[i])
             continue;
-        if (!isRef($_ref[i]))
-            throw new Error(`Non-ref value "${$_ref[i]}" in path "${track.concat('/')}"`);
-        let path = string2path($_ref[i]);
-        let refRes = getInWithCheck({ '^': _elements }, path);
-        testRef(refRes, $_ref[i], track.concat('@' + i));
+        if (!isRef($_refs[i]))
+            throw new Error(`Non-ref value "${$_refs[i]}" in path "${track.concat('/')}"`);
+        let $_ref = $_refs[i];
+        let refRes;
+        if ($_ref[1] === '.')
+            $_ref = resolveRelativeObject(baseObj, $_ref, track, opts);
+        if (isRef($_ref)) {
+            let path = string2path($_ref);
+            refRes = getInWithCheck({ '^': _elements }, path);
+        }
+        else
+            refRes = $_ref;
+        testRef(refRes, $_refs[i], track.concat('@' + i));
         if (isMergeable(refRes))
-            refRes = objectDerefer(_elements, refRes, opts, track.concat('@' + i));
+            refRes = objectDerefer(_elements, refRes, opts, track, baseObj);
         objs2merge.push(refRes);
     }
     if (objs2merge.length <= 1)
@@ -710,26 +719,45 @@ function processRef($_ref, _elements, opts, track) {
     }
     return result;
 }
-function objectDerefer(_elements, obj2deref, opts = {}, track = [], parent) {
+function resolvePath(path, base) {
+    const result = (base && (path[0] === '.' || path[0] == '..')) ? base.slice() : [];
+    for (let i = 0; i < path.length; i++) {
+        let val = path[i];
+        if (val === '..')
+            result.pop();
+        else if (val !== '' && val !== '.')
+            result.push(val);
+    }
+    return result;
+}
+exports.resolvePath = resolvePath;
+function resolveRelativeObject(obj, ref, track, opts) {
+    while (opts.isRef(ref) && ref[1] === '.') {
+        let path = resolvePath(string2path(ref.substr(1)), track);
+        ref = getIn(obj, path);
+    }
+    return ref;
+}
+function objectDerefer(_elements, obj2deref, opts = {}, track = [], baseObj = obj2deref) {
     let { isRef = isElemRef, refHandler, skipKey: skipFn = skipKey } = opts;
     opts = { isRef, refHandler, skipKey: skipFn };
     if (isRef(obj2deref)) {
-        let result = refHandler ? refHandler(_elements, obj2deref, opts, track, parent) : obj2deref;
+        let result = refHandler ? refHandler(_elements, obj2deref, opts, track, getIn(baseObj, track.slice(0, -1))) : obj2deref;
         if (isRef(result))
-            result = processRef(result, _elements, opts, track);
+            result = processRef(result, _elements, opts, track, baseObj);
         return result;
     }
     if (!isMergeable(obj2deref))
         return obj2deref;
     if (isArray(obj2deref))
-        return obj2deref.map((obj, i) => objectDerefer(_elements, obj, opts, track.concat(i), obj2deref));
+        return obj2deref.map((obj, i) => objectDerefer(_elements, obj, opts, track.concat(i), baseObj));
     let { $_ref = '' } = obj2deref, restObj = __rest(obj2deref, ["$_ref"]);
-    let result = processRef($_ref, _elements, opts, track);
+    let result = processRef($_ref, _elements, opts, track, baseObj);
     return merge(result, objMap(restObj, (obj, tr) => {
         let key = tr[tr.length - 1];
         if (!isRef(obj) && skipFn(key, obj2deref))
             return obj;
-        return objectDerefer(_elements, obj, opts, tr, obj2deref);
+        return objectDerefer(_elements, obj, opts, tr, baseObj);
     }, track));
     //objKeys(restObj).forEach(key => result[key] = isMergeable(restObj[key]) ? objectDerefer(_objects, restObj[key]) : restObj[key]);
 }

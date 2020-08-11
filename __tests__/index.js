@@ -56,7 +56,7 @@ describe('object resolver tests', function () {
       _more: {
         $_maps: {value: '@/value'}
       },
-      _$some: '^/funcs/two',
+      _$some: '^../_some',
       _$someMore: {$: '^/funcs/two'},
       $fields: [{$_maps: {length: '@/length'}}],
       $_maps: {value: '@/value'},
